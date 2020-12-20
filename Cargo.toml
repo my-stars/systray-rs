@@ -11,16 +11,16 @@ keywords = ["gui"]
 edition = "2018"
 
 [dependencies]
-log= "0.4.8"
+log= "0.4"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-winapi= { version = "0.3.8", features = ["shellapi", "libloaderapi", "errhandlingapi", "impl-default"] }
-libc= "0.2.66"
+winapi= { version = "0.3", features = ["shellapi", "libloaderapi", "errhandlingapi", "impl-default"] }
+libc= "0.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-gtk= "0.8.1"
-glib= "0.9.3"
-libappindicator= "0.5.1"
+gtk= "0.8"
+glib= "0.9"
+libappindicator= "0.5"
 
 # [target.'cfg(target_os = "macos")'.dependencies]
 # objc="*"
