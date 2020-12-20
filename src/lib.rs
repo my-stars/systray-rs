@@ -50,6 +50,7 @@ pub struct Application {
     // dealing with the OS main loop. Use this channel for receiving events from
     // that thread.
     rx: Receiver<SystrayEvent>,
+    timer: Option<(std::time::Duration, Callback)>,
 }
 
 type Callback =
@@ -75,9 +76,23 @@ impl Application {
                 menu_idx: 0,
                 callback: HashMap::new(),
                 rx: event_rx,
+                timer: None,
             }),
             Err(e) => Err(e),
         }
+    }
+
+    pub fn set_timer<F, E>(
+        &mut self,
+        interval: std::time::Duration,
+        callback: F,
+    ) -> Result<(), Error>
+    where
+        F: FnMut(&mut Application) -> Result<(), E> + Send + Sync + 'static,
+        E: error::Error + Send + Sync + 'static,
+    {
+        self.timer = Some((interval, make_callback(callback)));
+        Ok(())
     }
 
     pub fn add_menu_item<F, E>(&mut self, item_name: &str, f: F) -> Result<u32, Error>
@@ -92,6 +107,11 @@ impl Application {
         self.callback.insert(idx, make_callback(f));
         self.menu_idx += 1;
         Ok(idx)
+    }
+
+    pub fn remove_menu_item(&mut self, pos: u32) {
+        self.window.remove_menu_entry(pos);
+        self.callback.remove(&pos);
     }
 
     pub fn add_menu_separator(&mut self) -> Result<u32, Error> {
@@ -135,19 +155,29 @@ impl Application {
 
     pub fn wait_for_message(&mut self) -> Result<(), Error> {
         loop {
-            let msg;
-            match self.rx.recv() {
-                Ok(m) => msg = m,
-                Err(_) => {
-                    self.quit();
-                    break;
+            let mut msg = None;
+            if let Some((interval, _)) = self.timer.as_ref() {
+                match self.rx.recv_timeout(interval.clone()) {
+                    Ok(m) => msg = Some(m),
+                    Err(_) => {}
+                }
+            } else {
+                match self.rx.recv() {
+                    Ok(m) => msg = Some(m),
+                    Err(_) => {
+                        self.quit();
+                        break;
+                    }
                 }
             }
-            if self.callback.contains_key(&msg.menu_index) {
+            if let Some(msg) = msg {
                 if let Some(mut f) = self.callback.remove(&msg.menu_index) {
                     f(self)?;
                     self.callback.insert(msg.menu_index, f);
                 }
+            } else if let Some((interval, mut callback)) = self.timer.take() {
+                callback(self)?;
+                self.timer = Some((interval, callback));
             }
         }
 
