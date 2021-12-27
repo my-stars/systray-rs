@@ -17,10 +17,6 @@ log= "0.4"
 winapi= { version = "0.3", features = ["shellapi", "libloaderapi", "errhandlingapi", "impl-default"] }
 libc= "0.2"
 
-[target.'cfg(target_os = "linux")'.dependencies]
-gtk= "0.9"
-glib= "0.10"
-libappindicator= "0.5"
 
 # [target.'cfg(target_os = "macos")'.dependencies]
 # objc="*"
